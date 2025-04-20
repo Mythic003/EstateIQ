@@ -17,14 +17,14 @@ services:
   - type: web
     name: estateiq-frontend
     env: node
-    buildCommand: cd client && npm install && npm run build
-    startCommand: cd client && npm start
+    buildCommand: cd client && npm install && npm install -D tailwindcss postcss autoprefixer && npm run build
+    startCommand: cd client && npm run preview -- --port $PORT
     envVars:
       - key: NODE_VERSION
         value: 18.17.0
+      - key: PORT
+        value: 10000
       - key: REACT_APP_API_URL
         value: https://estateiq-api.onrender.com
-      - key: PORT
-        value: 3000
     healthCheckPath: /
     plan: free 
