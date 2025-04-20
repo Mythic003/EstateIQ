@@ -30,8 +30,9 @@ services:
     buildCommand: |
       cd client
       rm -rf node_modules package-lock.json
-      npm install
-      npm install -D vite@5.4.18
+      npm install --legacy-peer-deps
+      npm install -D vite@5.4.18 @vitejs/plugin-react@4.3.4
+      npx tailwindcss init -p
       npm run build
     startCommand: cd client && npm run preview -- --port $PORT --host 0.0.0.0
     envVars:
