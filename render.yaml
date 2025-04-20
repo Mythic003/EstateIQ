@@ -32,7 +32,7 @@ services:
       rm -rf node_modules package-lock.json
       npm cache clean --force
       npm install --no-package-lock
-      npm install
+      npm install --legacy-peer-deps
       npx tailwindcss init -p
       npm run build
     startCommand: cd client && npm run preview -- --port $PORT --host 0.0.0.0
