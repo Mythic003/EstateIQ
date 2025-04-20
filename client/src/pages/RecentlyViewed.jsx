@@ -15,7 +15,10 @@ import {
   MdApartment,
   MdStars,
   MdBed,
-  MdBathroom
+  MdBathroom,
+  MdWaterDrop,
+  MdSchool,
+  MdFlight
 } from 'react-icons/md';
 
 export default function RecentlyViewed() {
@@ -154,19 +157,19 @@ export default function RecentlyViewed() {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="flex items-center gap-2">
                         <MdLocationPin size={20} className="text-gray-400" />
-                        <span className="text-gray-600">Pincode: {prediction.pincode}</span>
+                        <span className="text-gray-600">Zipcode: {prediction.zipcode}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <MdCalendarMonth size={20} className="text-gray-400" />
-                        <span className="text-gray-600">Built: {prediction.builtYear}</span>
+                        <span className="text-gray-600">Built: {prediction.yr_built}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <MdSquareFoot size={20} className="text-gray-400" />
-                        <span className="text-gray-600">Total Area: {prediction.lotArea} sqft</span>
+                        <span className="text-gray-600">Lot Area: {prediction.sqft_lot?.toLocaleString()} sqft</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <MdMeetingRoom size={20} className="text-gray-400" />
-                        <span className="text-gray-600">Living Area: {prediction.livingArea} sqft</span>
+                        <span className="text-gray-600">Living Area: {prediction.sqft_living?.toLocaleString()} sqft</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <MdApartment size={20} className="text-gray-400" />
@@ -174,15 +177,15 @@ export default function RecentlyViewed() {
                       </div>
                       <div className="flex items-center gap-2">
                         <MdStars size={20} className="text-gray-400" />
-                        <span className="text-gray-600">Condition: {prediction.condition}/10</span>
+                        <span className="text-gray-600">Grade: {prediction.grade}/13</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <MdBed size={20} className="text-gray-400" />
-                        <span className="text-gray-600">Bedrooms: {prediction.bedrooms}</span>
+                        <MdWaterDrop size={20} className="text-gray-400" />
+                        <span className="text-gray-600">Waterfront: {prediction.waterfront === '1' ? 'Yes' : 'No'}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <MdBathroom size={20} className="text-gray-400" />
-                        <span className="text-gray-600">Bathrooms: {prediction.bathrooms}</span>
+                        <MdSchool size={20} className="text-gray-400" />
+                        <span className="text-gray-600">Schools: {prediction.schools_nearby || 0}</span>
                       </div>
                     </div>
                   </div>
@@ -191,33 +194,30 @@ export default function RecentlyViewed() {
                   <div className="lg:col-span-2">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">Prediction Results</h3>
                     <div className="bg-gray-50 rounded-lg p-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <div className="text-sm text-gray-500">Predicted Price</div>
-                          <div className="text-2xl font-bold text-primary-600 flex items-center gap-2">
-                            <BanknotesIcon className="h-6 w-6" />
-                            ${prediction.predictedPrice.toLocaleString()}
+                          <div className="text-sm text-gray-500">Estimated Price</div>
+                          <div className="text-2xl font-bold text-primary-600">
+                            ₹{Math.round(Math.abs(prediction.prediction) * 1000000).toLocaleString('en-IN')}
                           </div>
                         </div>
                         <div>
                           <div className="text-sm text-gray-500">Price Range</div>
-                          <div className="text-lg text-gray-700 flex items-center gap-2">
-                            <BanknotesIcon className="h-5 w-5 text-gray-400" />
-                            ${prediction.priceRange.min.toLocaleString()} - ${prediction.priceRange.max.toLocaleString()}
+                          <div className="text-lg text-gray-700">
+                            ₹{Math.round(Math.abs(prediction.prediction) * 0.98 * 1000000).toLocaleString('en-IN')} to ₹{Math.round(Math.abs(prediction.prediction) * 1.02 * 1000000).toLocaleString('en-IN')}
                           </div>
                         </div>
                         <div>
                           <div className="text-sm text-gray-500">Confidence Score</div>
                           <div className="text-lg text-gray-700 flex items-center gap-2">
                             <ChartBarIcon className="h-5 w-5 text-gray-400" />
-                            {prediction.confidence}%
+                            80%
                           </div>
                         </div>
                         <div>
                           <div className="text-sm text-gray-500">Prediction Date</div>
-                          <div className="text-lg text-gray-700 flex items-center gap-2">
-                            <MdCalendarMonth size={16} className="text-gray-400" />
-                            {formatDate(prediction.date)}
+                          <div className="text-lg text-gray-700">
+                            {formatDate(prediction.timestamp)}
                           </div>
                         </div>
                       </div>

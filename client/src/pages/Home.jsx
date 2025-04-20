@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
@@ -8,15 +8,26 @@ import {
   XMarkIcon
 } from '@heroicons/react/24/outline';
 import { 
-  MdLocationPin, // for pincode
-  MdCalendarMonth, // for built year
-  MdSquareFoot, // for lot area
-  MdMeetingRoom, // for living area
-  MdApartment, // for floors
-  MdStars, // for condition rating
-  MdBed, // for bedrooms
-  MdBathroom // for bathrooms
+  MdLocationPin,
+  MdCalendarMonth,
+  MdSquareFoot,
+  MdMeetingRoom,
+  MdApartment,
+  MdStars,
+  MdBed,
+  MdBathroom,
+  MdWaterDrop,
+  MdRemoveRedEye,
+  MdGrade,
+  MdSchool,
+  MdFlight
 } from 'react-icons/md';
+import { Box, Stepper, Step, StepLabel, Paper, Grid, Button, CircularProgress, TextField } from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import SendIcon from '@mui/icons-material/Send';
+import { Container, Typography } from '@mui/material';
+import { predictPrice } from '../services/api';
 
 const stats = [
   { 
@@ -63,160 +74,80 @@ const features = [
   },
 ];
 
+const steps = ['Location & Basic Info', 'Property Details', 'Additional Features'];
+
+// Custom styles for TextField to remove focus outline
+const textFieldStyle = {
+  '& .MuiOutlinedInput-root': {
+    '&.Mui-focused fieldset': {
+      borderColor: 'rgba(0, 0, 0, 0.23)', // Same as unfocused
+    },
+    '&:hover fieldset': {
+      borderColor: 'rgba(0, 0, 0, 0.23)', // Same as unfocused
+    },
+    '& input': {
+      '&:focus': {
+        outline: 'none !important',
+        boxShadow: 'none !important',
+      },
+      '&:invalid': {
+        outline: 'none !important',
+        boxShadow: 'none !important',
+      },
+      '&[type=number]': {
+        'MozAppearance': 'textfield',
+        '&::-webkit-outer-spin-button': {
+          WebkitAppearance: 'none',
+          margin: 0,
+        },
+        '&::-webkit-inner-spin-button': {
+          WebkitAppearance: 'none',
+          margin: 0,
+        }
+      }
+    }
+  }
+};
+
 export default function Home() {
   const { user } = useAuth();
-  const [step, setStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState({
-    pincode: '',
-    builtYear: '',
-    lotArea: '',
-    livingArea: '',
-    bedrooms: '',
-    bathrooms: '',
+    zipcode: '',
+    yr_built: '',
+    sqft_lot: '',
+    sqft_living: '',
     floors: '',
+    yr_renovated: 0,
     condition: '',
+    grade: '',
+    sqft_basement: '',
+    schools_nearby: 0,
+    waterfront: 0,
+    sqft_above: '',
+    sqft_lot15: '',
+    sqft_living15: '',
+    airport_distance: 0
   });
   const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
   const [prediction, setPrediction] = useState(null);
 
-  const validateInput = (name, value) => {
-    switch (name) {
-      case 'pincode':
-        return /^\d{6}$/.test(value) ? '' : 'Please enter a valid 6-digit pincode';
-      case 'builtYear': {
-        const year = parseInt(value);
-        const currentYear = new Date().getFullYear();
-        return /^\d{4}$/.test(value) && year >= 1800 && year <= currentYear 
-          ? '' 
-          : `Please enter a valid year between 1800 and ${currentYear}`;
-      }
-      case 'lotArea':
-      case 'livingArea':
-        return /^\d+$/.test(value) ? '' : 'Please enter a valid number';
-      case 'bedrooms':
-      case 'bathrooms':
-      case 'floors':
-        return /^(\d+|(\d*\.5))$/.test(value) && parseFloat(value) >= 0 
-          ? '' 
-          : 'Please enter a valid number (whole or .5 values only)';
-      case 'condition':
-        const conditionValue = parseInt(value);
-        return /^\d+$/.test(value) && conditionValue >= 1 && conditionValue <= 10 
-          ? '' 
-          : 'Please enter a number between 1 and 10';
-      default:
-        return '';
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    // Get fields for current step
-    const currentFields = getFieldsForStep(step);
-    
-    // Validate current step fields
-    const newErrors = {};
-    currentFields.forEach(field => {
-      const error = validateInput(field, formData[field]);
-      if (error) newErrors[field] = error;
-    });
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-
-    if (step < 2) {
-      // Move to next step
-      setStep(step + 1);
-      setErrors({});
-    } else {
-      // Handle final submission
-      setPrediction(null);
-      
-      // Your API call logic here
-      setTimeout(() => {
-        const newPrediction = {
-          id: Date.now(),
-          ...formData,
-          predictedPrice: 850000,
-          priceRange: {
-            min: 820000,
-            max: 880000
-          },
-          confidence: 92,
-          date: new Date().toISOString()
-        };
-
-        // Save prediction to localStorage
-        const savedPredictions = JSON.parse(localStorage.getItem('predictions') || '[]');
-        
-        // Check if this exact prediction already exists
-        const predictionExists = savedPredictions.some(p => 
-          p.pincode === newPrediction.pincode &&
-          p.lotArea === newPrediction.lotArea &&
-          p.livingArea === newPrediction.livingArea &&
-          p.bedrooms === newPrediction.bedrooms &&
-          p.bathrooms === newPrediction.bathrooms &&
-          p.floors === newPrediction.floors &&
-          p.condition === newPrediction.condition &&
-          p.builtYear === newPrediction.builtYear
-        );
-
-        if (!predictionExists) {
-          localStorage.setItem('predictions', JSON.stringify([newPrediction, ...savedPredictions]));
-        }
-
-        setPrediction(newPrediction);
-        
-        // Reset form
-        setFormData({
-          pincode: '',
-          builtYear: '',
-          lotArea: '',
-          livingArea: '',
-          bedrooms: '',
-          bathrooms: '',
-          floors: '',
-          condition: '',
-        });
-        setStep(1);
-      }, 1000);
-    }
-  };
-
-  const handleChange = (e) => {
+  const handleInputChange = (e) => {
     const { name, value } = e.target;
-    
-    // Special handling for bedrooms, bathrooms, and floors
-    if (['bedrooms', 'bathrooms', 'floors'].includes(name)) {
-      // Only allow numbers and decimal point
-      if (!/^\d*\.?\d*$/.test(value) && value !== '') return;
-      
-      // If it's a decimal number, check if it's a .5
-      if (value.includes('.')) {
-        const [whole, decimal] = value.split('.');
-        if (decimal && decimal !== '5') return;
-      }
-    }
-    
-    // For numeric fields, only allow numbers
-    if (['lotArea', 'livingArea', 'condition'].includes(name)) {
-      if (!/^\d*$/.test(value) && value !== '') return;
-    }
-    
-    // For pincode, only allow numbers and max 6 digits
-    if (name === 'pincode' && (!/^\d*$/.test(value) || value.length > 6) && value !== '') return;
+    let processedValue = value;
 
-    // For built year, only allow numbers and max 4 digits
-    if (name === 'builtYear' && (!/^\d*$/.test(value) || value.length > 4) && value !== '') return;
+    // Handle numeric fields
+    if (name !== 'zipcode') {
+      processedValue = value === '' ? '' : Number(value);
+    }
 
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: processedValue
     }));
 
+    // Clear error for this field when user starts typing
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -225,91 +156,293 @@ export default function Home() {
     }
   };
 
-  const getFieldsForStep = (currentStep) => {
-    switch (currentStep) {
+  const validateStep = (step) => {
+    const newErrors = {};
+    
+    switch (step) {
+      case 0:
+        if (!formData.zipcode) newErrors.zipcode = 'Required';
+        if (!formData.yr_built) newErrors.yr_built = 'Required';
+        if (!formData.sqft_lot) newErrors.sqft_lot = 'Required';
+        if (!formData.sqft_living) newErrors.sqft_living = 'Required';
+        
+        if (!/^\d{6}$/.test(formData.zipcode)) {
+          newErrors.zipcode = 'Must be a 6-digit code';
+        }
+        if (formData.yr_built < 1800 || formData.yr_built > new Date().getFullYear()) {
+          newErrors.yr_built = 'Invalid year';
+        }
+        if (formData.sqft_lot <= 0) newErrors.sqft_lot = 'Must be greater than 0';
+        if (formData.sqft_living <= 0) newErrors.sqft_living = 'Must be greater than 0';
+        break;
+
       case 1:
-        return ['pincode', 'builtYear', 'lotArea', 'livingArea', 'bedrooms'];
-      case 2:
-        return ['bathrooms', 'floors', 'condition'];
+        if (!formData.floors) newErrors.floors = 'Required';
+        if (!formData.condition) newErrors.condition = 'Required';
+        if (!formData.grade) newErrors.grade = 'Required';
+        
+        if (formData.floors <= 0) newErrors.floors = 'Must be greater than 0';
+        if (formData.condition < 1 || formData.condition > 5) {
+          newErrors.condition = 'Must be between 1 and 5';
+        }
+        if (formData.grade < 1 || formData.grade > 13) {
+          newErrors.grade = 'Must be between 1 and 13';
+        }
+        if (formData.yr_renovated && (formData.yr_renovated < formData.yr_built || formData.yr_renovated > new Date().getFullYear())) {
+          newErrors.yr_renovated = 'Invalid renovation year';
+        }
+        break;
+
       default:
-        return [];
+        break;
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleNext = () => {
+    if (validateStep(currentStep)) {
+      if (currentStep === steps.length - 1) {
+        handleSubmit();
+      } else {
+        setCurrentStep(prev => prev + 1);
+      }
     }
   };
 
-  const renderFormFields = () => {
-    const fields = getFieldsForStep(step);
-    
-    return fields.map(field => (
-      <div key={field} className={`${errors[field] ? 'mb-10' : 'mb-6'}`}>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          {getFieldLabel(field)}
-        </label>
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
-            {field === 'pincode' && <MdLocationPin size={20} className="text-gray-400" />}
-            {field === 'builtYear' && <MdCalendarMonth size={20} className="text-gray-400" />}
-            {field === 'lotArea' && <MdSquareFoot size={20} className="text-gray-400" />}
-            {field === 'livingArea' && <MdMeetingRoom size={20} className="text-gray-400" />}
-            {field === 'bedrooms' && <MdBed size={20} className="text-gray-400" />}
-            {field === 'bathrooms' && <MdBathroom size={20} className="text-gray-400" />}
-            {field === 'floors' && <MdApartment size={20} className="text-gray-400" />}
-            {field === 'condition' && <MdStars size={20} className="text-gray-400" />}
-          </div>
-          <input
-            type="text"
-            name={field}
-            value={formData[field]}
-            onChange={handleChange}
-            placeholder={getFieldPlaceholder(field)}
-            maxLength={field === 'pincode' ? 6 : field === 'builtYear' ? 4 : undefined}
-            className={`block w-full pl-10 rounded-md border ${
-              errors[field] ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary-600 focus:ring-primary-600'
-            } py-2.5 text-gray-900 shadow-sm transition-all duration-300 ease-in-out hover:border-primary-400 sm:text-sm`}
-            aria-invalid={errors[field] ? "true" : "false"}
-            aria-describedby={errors[field] ? `${field}-error` : undefined}
-          />
-          {errors[field] && (
-            <div className="absolute inset-x-0 top-full mt-1">
-              <p 
-                className="text-sm text-red-600" 
-                id={`${field}-error`}
-                role="alert"
+  const handleBack = () => {
+    setCurrentStep(prev => prev - 1);
+  };
+
+  const handleSubmit = async () => {
+    setLoading(true);
+    try {
+      // Set default values for missing features
+      const submissionData = {
+        ...formData,
+        sqft_above: formData.sqft_above || formData.sqft_living,
+        sqft_basement: formData.sqft_basement || 0,
+        sqft_living15: formData.sqft_living15 || formData.sqft_living,
+        sqft_lot15: formData.sqft_lot15 || formData.sqft_lot,
+        yr_renovated: formData.yr_renovated || 0
+      };
+
+      const result = await predictPrice(submissionData);
+      setPrediction(result);
+
+      // Save prediction to localStorage
+      const savedPredictions = JSON.parse(localStorage.getItem('predictions') || '[]');
+      const newPrediction = {
+        id: Date.now().toString(), // Unique ID for the prediction
+        timestamp: new Date().toISOString(),
+        prediction: result.prediction,
+        ...submissionData // Include all form data
+      };
+      
+      savedPredictions.unshift(newPrediction); // Add new prediction at the start
+      localStorage.setItem('predictions', JSON.stringify(savedPredictions));
+
+      setCurrentStep(3); // Move to result step
+    } catch (error) {
+      setErrors(prev => ({
+        ...prev,
+        submit: error.message || 'Failed to get prediction'
+      }));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderStepContent = (step) => {
+    switch (step) {
+      case 0:
+        return (
+          <Grid container spacing={3}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Zipcode"
+                name="zipcode"
+                value={formData.zipcode}
+                onChange={handleInputChange}
+                error={!!errors.zipcode}
+                helperText={errors.zipcode || 'Enter 6-digit zipcode'}
+                inputProps={{ 
+                  maxLength: 6,
+                  pattern: '\\d{6}',
+                  inputMode: 'numeric'
+                }}
+                required
+                sx={textFieldStyle}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Year Built"
+                name="yr_built"
+                type="number"
+                value={formData.yr_built}
+                onChange={handleInputChange}
+                error={!!errors.yr_built}
+                helperText={errors.yr_built}
+                inputProps={{ min: 1800, max: new Date().getFullYear() }}
+                required
+                sx={textFieldStyle}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Lot Area (sqft)"
+                name="sqft_lot"
+                type="number"
+                value={formData.sqft_lot}
+                onChange={handleInputChange}
+                error={!!errors.sqft_lot}
+                helperText={errors.sqft_lot}
+                inputProps={{ min: 1 }}
+                required
+                sx={textFieldStyle}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Living Area (sqft)"
+                name="sqft_living"
+                type="number"
+                value={formData.sqft_living}
+                onChange={handleInputChange}
+                error={!!errors.sqft_living}
+                helperText={errors.sqft_living}
+                inputProps={{ min: 1 }}
+                required
+                sx={textFieldStyle}
+              />
+            </Grid>
+          </Grid>
+        );
+
+      case 1:
+        return (
+          <Grid container spacing={3}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Floors"
+                name="floors"
+                type="number"
+                value={formData.floors}
+                onChange={handleInputChange}
+                error={!!errors.floors}
+                helperText={errors.floors}
+                inputProps={{ min: 1, step: 0.5 }}
+                required
+                sx={textFieldStyle}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Year Renovated"
+                name="yr_renovated"
+                type="number"
+                value={formData.yr_renovated}
+                onChange={handleInputChange}
+                error={!!errors.yr_renovated}
+                helperText={errors.yr_renovated || "0 if never renovated"}
+                inputProps={{ min: 0, max: new Date().getFullYear() }}
+                sx={textFieldStyle}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Condition (1-5)"
+                name="condition"
+                type="number"
+                value={formData.condition}
+                onChange={handleInputChange}
+                error={!!errors.condition}
+                helperText={errors.condition || '1: Poor, 2: Fair, 3: Average, 4: Good, 5: Excellent'}
+                inputProps={{ min: 1, max: 5, step: 1 }}
+                required
+                sx={textFieldStyle}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Grade (1-13)"
+                name="grade"
+                type="number"
+                value={formData.grade}
+                onChange={handleInputChange}
+                error={!!errors.grade}
+                helperText={errors.grade || '1-3: Poor, 4-6: Low, 7: Average, 8-10: Good, 11-13: High Quality'}
+                inputProps={{ min: 1, max: 13, step: 1 }}
+                required
+                sx={textFieldStyle}
+              />
+            </Grid>
+          </Grid>
+        );
+
+      case 2:
+        return (
+          <Grid container spacing={3}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Basement Area (sqft)"
+                name="sqft_basement"
+                type="number"
+                value={formData.sqft_basement}
+                onChange={handleInputChange}
+                helperText="Optional - defaults to 0 if not specified"
+                inputProps={{ min: 0 }}
+                sx={textFieldStyle}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Schools Nearby"
+                name="schools_nearby"
+                type="number"
+                value={formData.schools_nearby}
+                onChange={handleInputChange}
+                helperText="Optional"
+                inputProps={{ min: 0, step: 1 }}
+                sx={textFieldStyle}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Waterfront"
+                name="waterfront"
+                select
+                value={formData.waterfront}
+                onChange={handleInputChange}
+                helperText="Optional"
+                SelectProps={{
+                  native: true
+                }}
+                sx={textFieldStyle}
               >
-                {errors[field]}
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-    ));
-  };
+                <option value={0}>No</option>
+                <option value={1}>Yes</option>
+              </TextField>
+            </Grid>
+          </Grid>
+        );
 
-  const getFieldLabel = (field) => {
-    const labels = {
-      pincode: 'Pincode',
-      builtYear: 'Built Year',
-      lotArea: 'Total Property Area (sq ft)',
-      livingArea: 'Living Area (sq ft)',
-      bedrooms: 'Bedrooms',
-      bathrooms: 'Bathrooms',
-      floors: 'Number of Floors',
-      condition: 'Property Condition (1-10)',
-    };
-    return labels[field];
-  };
-
-  const getFieldPlaceholder = (field) => {
-    const placeholders = {
-      pincode: 'Enter 6-digit pincode',
-      builtYear: 'Enter year (e.g., 2010)',
-      lotArea: 'Enter total property area',
-      livingArea: 'Enter living area',
-      bedrooms: 'Enter number (e.g., 2 or 2.5)',
-      bathrooms: 'Enter number (e.g., 1 or 1.5)',
-      floors: 'Enter number (e.g., 1 or 1.5)',
-      condition: 'Rate from 1 to 10',
-    };
-    return placeholders[field];
+      default:
+        return null;
+    }
   };
 
   return (
@@ -320,97 +453,177 @@ export default function Home() {
       transition={{ duration: 0.5, ease: "easeOut" }}
       className="flex-1 w-full"
     >
-      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Prediction Form */}
-          <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="bg-white rounded-lg shadow p-6 transition-all duration-300 ease-in-out hover:shadow-lg"
-          >
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-semibold text-gray-900">Predict Property Price</h2>
-              <div className="text-sm text-gray-500">Step {step} of 2</div>
-            </div>
-            
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <motion.div
-                key={step}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-6"
-              >
-                {renderFormFields()}
-              </motion.div>
+      <Container maxWidth="lg">
+        <Box sx={{ py: 4 }}>
+          <Grid container spacing={{ xs: 2, md: 4 }}>
+            {/* Prediction Form */}
+            <Grid item xs={12} md={7}>
+              <Paper elevation={3} sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
+                <Box sx={{ mb: { xs: 2, sm: 3, md: 4 } }}>
+                  <Typography variant="h4" gutterBottom sx={{ 
+                    fontSize: { xs: '1.5rem', sm: '2rem', md: '2.25rem' } 
+                  }}>
+                    Predict Property Price
+                  </Typography>
+                  <Typography variant="body1" color="textSecondary">
+                    Step {currentStep + 1} of {steps.length}
+                  </Typography>
+                </Box>
 
-              <div className={`flex justify-between items-center ${Object.keys(errors).length > 0 ? 'mt-12' : 'mt-6'}`}>
-                {step > 1 && (
-                  <motion.button
-                    type="button"
-                    onClick={() => setStep(step - 1)}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="bg-gray-100 text-gray-700 py-2.5 px-4 rounded-md transition-all duration-300 ease-in-out hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-                  >
-                    Back
-                  </motion.button>
+                <Stepper 
+                  activeStep={currentStep} 
+                  alternativeLabel 
+                  sx={{ 
+                    mb: { xs: 2, sm: 3, md: 4 },
+                    '& .MuiStepLabel-label': {
+                      fontSize: { xs: '0.75rem', sm: '0.875rem', md: '1rem' }
+                    }
+                  }}
+                >
+                  {steps.map((label) => (
+                    <Step key={label}>
+                      <StepLabel>{label}</StepLabel>
+                    </Step>
+                  ))}
+                </Stepper>
+
+                <Box sx={{ mt: { xs: 2, sm: 3, md: 4 } }}>
+                  <form onSubmit={(e) => { e.preventDefault(); handleNext(); }}>
+                    <Box sx={{ mb: { xs: 2, sm: 3, md: 4 } }}>
+                      {renderStepContent(currentStep)}
+                    </Box>
+
+                    <Box sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      mt: { xs: 2, sm: 3, md: 4 },
+                      flexDirection: { xs: 'column', sm: 'row' },
+                      gap: { xs: 2, sm: 0 }
+                    }}>
+                      <Button
+                        variant="outlined"
+                        onClick={handleBack}
+                        disabled={currentStep === 0}
+                        startIcon={<ArrowBackIcon />}
+                        fullWidth={false}
+                        sx={{ width: { xs: '100%', sm: 'auto' } }}
+                      >
+                        Back
+                      </Button>
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={handleNext}
+                        disabled={loading}
+                        endIcon={currentStep === steps.length - 1 ? <SendIcon /> : <ArrowForwardIcon />}
+                        sx={{ width: { xs: '100%', sm: 'auto' } }}
+                      >
+                        {loading ? (
+                          <CircularProgress size={24} />
+                        ) : currentStep === steps.length - 1 ? (
+                          'Get Prediction'
+                        ) : (
+                          'Next'
+                        )}
+                      </Button>
+                    </Box>
+
+                    {errors.submit && (
+                      <Typography color="error" align="center" sx={{ mt: 2 }}>
+                        {errors.submit}
+                      </Typography>
+                    )}
+                  </form>
+                </Box>
+              </Paper>
+            </Grid>
+
+            {/* Prediction Output */}
+            <Grid item xs={12} md={5}>
+              <Paper elevation={3} sx={{ 
+                p: { xs: 2, sm: 3, md: 4 }, 
+                height: '100%', 
+                display: 'flex', 
+                flexDirection: 'column', 
+                justifyContent: 'center'
+              }}>
+                {prediction ? (
+                  <Box>
+                    <Typography variant="h4" color="primary" gutterBottom sx={{
+                      fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' }
+                    }}>
+                      Estimated Price
+                    </Typography>
+                    <Typography variant="h2" sx={{ 
+                      mb: 3, 
+                      fontWeight: 'bold',
+                      fontSize: { xs: '1.75rem', sm: '2.25rem', md: '2.75rem' }
+                    }}>
+                      ₹{Math.round(prediction.prediction * 1000000).toLocaleString('en-IN')}
+                    </Typography>
+                    <Typography variant="subtitle1" color="text.secondary" gutterBottom sx={{
+                      fontSize: { xs: '0.875rem', sm: '1rem', md: '1.1rem' }
+                    }}>
+                      Price Range
+                    </Typography>
+                    <Typography variant="h6" color="text.secondary" sx={{ 
+                      mb: 3,
+                      fontSize: { xs: '1rem', sm: '1.25rem', md: '1.5rem' }
+                    }}>
+                      ₹{Math.round(prediction.prediction * 0.98 * 1000000).toLocaleString('en-IN')} to ₹{Math.round(prediction.prediction * 1.02 * 1000000).toLocaleString('en-IN')}
+                    </Typography>
+                    <Typography variant="body1" color="textSecondary" sx={{ 
+                      mt: 2,
+                      fontSize: { xs: '0.875rem', sm: '1rem' }
+                    }}>
+                      Confidence Score: 80%
+                    </Typography>
+                    <Button
+                      variant="outlined"
+                      color="primary"
+                      onClick={() => {
+                        setCurrentStep(0);
+                        setPrediction(null);
+                        setFormData({
+                          zipcode: '',
+                          yr_built: '',
+                          sqft_lot: '',
+                          sqft_living: '',
+                          floors: '',
+                          yr_renovated: 0,
+                          condition: '',
+                          grade: '',
+                          sqft_basement: '',
+                          schools_nearby: 0,
+                          waterfront: 0,
+                          sqft_above: '',
+                          sqft_lot15: '',
+                          sqft_living15: '',
+                          airport_distance: 0
+                        });
+                      }}
+                      sx={{ 
+                        mt: { xs: 2, sm: 3, md: 4 },
+                        width: { xs: '100%', sm: 'auto' }
+                      }}
+                    >
+                      Make Another Prediction
+                    </Button>
+                  </Box>
+                ) : (
+                  <Box textAlign="center">
+                    <Typography variant="h6" color="textSecondary" sx={{
+                      fontSize: { xs: '1rem', sm: '1.25rem', md: '1.5rem' }
+                    }}>
+                      Fill out the form to get your property price prediction
+                    </Typography>
+                  </Box>
                 )}
-                <motion.button
-                  type="submit"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={`${step > 1 ? 'ml-auto' : 'w-full'} bg-primary-600 text-white py-2.5 px-4 rounded-md transition-all duration-300 ease-in-out hover:bg-primary-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500`}
-                >
-                  {step < 2 ? 'Next' : 'Get Price Prediction'}
-                </motion.button>
-              </div>
-            </form>
-          </motion.div>
-
-          {/* Prediction Results */}
-          <motion.div 
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            className="bg-white rounded-lg shadow p-6 transition-all duration-300 ease-in-out hover:shadow-lg"
-          >
-            <h2 className="text-2xl font-semibold text-gray-900 mb-6 text-center">Estimated Price Range</h2>
-            
-            <div className="flex flex-col items-center justify-center h-[calc(100%-4rem)]">
-              {prediction ? (
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5 }}
-                  className="space-y-4"
-                >
-                  <div className="text-6xl font-bold text-gray-900 mb-4 transition-all duration-300">
-                    ${prediction.predictedPrice.toLocaleString()}
-                  </div>
-                  <div className="text-lg text-gray-600 transition-all duration-300">
-                    Range: ${prediction.priceRange.min.toLocaleString()} - ${prediction.priceRange.max.toLocaleString()}
-                  </div>
-                  <div className="mt-4 text-sm text-gray-500 transition-all duration-300">
-                    Confidence Score: {prediction.confidence}%
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.3 }}
-                  className="text-center text-gray-500"
-                >
-                  <p className="text-lg animate-pulse">Enter property details to get a price prediction</p>
-                </motion.div>
-              )}
-            </div>
-          </motion.div>
-        </div>
-      </div>
+              </Paper>
+            </Grid>
+          </Grid>
+        </Box>
+      </Container>
     </motion.main>
   );
 } 

@@ -1,6 +1,5 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
-import { getAnalytics } from 'firebase/analytics';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -14,8 +13,18 @@ const firebaseConfig = {
 
 // Initialize Firebase
 export const app = initializeApp(firebaseConfig);
-export const analytics = getAnalytics(app);
 export const auth = getAuth(app);
+
+// Initialize Analytics only in production
+let analytics = null;
+if (import.meta.env.PROD) {
+  import('firebase/analytics').then(({ getAnalytics }) => {
+    analytics = getAnalytics(app);
+  }).catch(error => {
+    console.warn('Analytics failed to load:', error);
+  });
+}
+export { analytics };
 
 // Set persistence to LOCAL
 setPersistence(auth, browserLocalPersistence)

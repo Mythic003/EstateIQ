@@ -26,6 +26,10 @@ CORS(app)  # Enable CORS for all routes
 MODELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models')
 MODEL_PATH = os.path.join(MODELS_DIR, 'best_model_20250420_000125.joblib')
 
+# Global variables for model and feature names
+model = None
+feature_names = None
+
 def download_model_if_needed():
     """Download model from GitHub if not present"""
     model_path = Path('models/best_model.joblib')
@@ -53,20 +57,21 @@ def load_model():
             logger.error(f"Model file not found at: {MODEL_PATH}")
             raise FileNotFoundError(f"Model file not found at: {MODEL_PATH}")
         
-        model = joblib.load(MODEL_PATH)
+        model_data = joblib.load(MODEL_PATH)
         logger.info("Model loaded successfully")
-        return model
+        return model_data['model'], model_data['feature_names']
     except Exception as e:
         logger.error(f"Error loading model: {str(e)}", exc_info=True)
         raise
 
 # Load model at startup
 try:
-    model = load_model()
+    model, feature_names = load_model()
     logger.info("Model loaded successfully at startup")
 except Exception as e:
     logger.error(f"Could not load model. Error: {str(e)}")
     model = None
+    feature_names = None
 
 @app.route('/')
 def root():
@@ -91,10 +96,30 @@ def health_check():
         'environment': os.getenv('FLASK_ENV', 'production')
     })
 
+# Feature name mapping from API input to model features
+FEATURE_MAPPING = {
+    'bedrooms': 'number of bedrooms',
+    'bathrooms': 'number of bathrooms',
+    'sqft_living': 'living area',
+    'sqft_lot': 'lot area',
+    'floors': 'number of floors',
+    'waterfront': 'waterfront present',
+    'view': 'number of views',
+    'condition': 'condition of the house',
+    'grade': 'grade of the house',
+    'sqft_above': 'Area of the house(excluding basement)',
+    'sqft_basement': 'Area of the basement',
+    'yr_built': 'Built Year',
+    'yr_renovated': 'Renovation Year',
+    'zipcode': 'Postal Code',
+    'sqft_living15': 'living_area_renov',
+    'sqft_lot15': 'lot_area_renov'
+}
+
 @app.route('/predict', methods=['POST'])
 def predict():
     """Make predictions using the loaded model"""
-    if model is None:
+    if model is None or feature_names is None:
         return jsonify({
             'error': 'Model not loaded',
             'message': 'The prediction model is not available'
@@ -108,14 +133,26 @@ def predict():
                 'message': 'Please provide input data in JSON format'
             }), 400
 
+        # Map input features to model features
+        mapped_data = {}
+        for api_name, model_name in FEATURE_MAPPING.items():
+            if api_name in data:
+                mapped_data[model_name] = data[api_name]
+
+        # Add default values for missing features
+        mapped_data['Number of schools nearby'] = data.get('schools_nearby', 5)  # Default value
+        mapped_data['Distance from the airport'] = data.get('airport_distance', 10.5)  # Default value
+
         # Convert input data to DataFrame
-        input_data = pd.DataFrame([data])
+        input_data = pd.DataFrame([mapped_data])
         
         # Make prediction
         prediction = model.predict(input_data)
         
         return jsonify({
-            'prediction': float(prediction[0])
+            'prediction': float(prediction[0]),
+            'currency': 'USD',
+            'timestamp': datetime.now().isoformat()
         })
     except Exception as e:
         logger.error(f"Prediction error: {str(e)}", exc_info=True)
