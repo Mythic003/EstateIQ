@@ -14,12 +14,12 @@ jobs:
     if: github.ref == 'refs/heads/main'
     
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.8'
+          python-version: '3.9'
           
       - name: Install ML API dependencies
         run: |
@@ -30,9 +30,8 @@ jobs:
       - name: Deploy ML API to Render
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-          ML_API_SERVICE_ID: ${{ secrets.ML_API_SERVICE_ID }}
         run: |
-          curl -X POST "https://api.render.com/v1/services/$ML_API_SERVICE_ID/deploys" \
+          curl -X POST "https://api.render.com/v1/services/srv-d027tlbe5dus73bgiom0/deploys" \
             -H "Authorization: Bearer $RENDER_API_KEY"
 
   deploy-frontend:
@@ -40,52 +39,26 @@ jobs:
     if: github.ref == 'refs/heads/main'
     
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       
       - name: Set up Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
-          node-version: '16'
+          node-version: '18'
           
       - name: Install frontend dependencies
         run: |
-          cd frontend
+          cd client
           npm install
           
       - name: Build frontend
         run: |
-          cd frontend
+          cd client
           npm run build
           
       - name: Deploy frontend to Render
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-          FRONTEND_SERVICE_ID: ${{ secrets.FRONTEND_SERVICE_ID }}
         run: |
-          curl -X POST "https://api.render.com/v1/services/$FRONTEND_SERVICE_ID/deploys" \
-            -H "Authorization: Bearer $RENDER_API_KEY"
-
-  deploy-backend:
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    
-    steps:
-      - uses: actions/checkout@v2
-      
-      - name: Set up Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: '16'
-          
-      - name: Install backend dependencies
-        run: |
-          cd server
-          npm install
-          
-      - name: Deploy backend to Render
-        env:
-          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-          BACKEND_SERVICE_ID: ${{ secrets.BACKEND_SERVICE_ID }}
-        run: |
-          curl -X POST "https://api.render.com/v1/services/$BACKEND_SERVICE_ID/deploys" \
+          curl -X POST "https://api.render.com/v1/services/srv-d027tlbe5dus73bgion0/deploys" \
             -H "Authorization: Bearer $RENDER_API_KEY" 
