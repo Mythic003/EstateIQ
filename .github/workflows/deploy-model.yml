@@ -12,12 +12,12 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v3
         with:
-          python-version: '3.8'
+          python-version: '3.9'
           
       - name: Install dependencies
         run: |
@@ -28,8 +28,8 @@ jobs:
       - name: Deploy to Render
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-          ML_API_SERVICE_ID: ${{ secrets.ML_API_SERVICE_ID }}
+          FLASK_SERVICE_ID: ${{ secrets.RENDER_FLASK_SERVICE_ID }}
         run: |
           # Trigger deploy
-          curl -X POST "https://api.render.com/v1/services/$ML_API_SERVICE_ID/deploys" \
+          curl -X POST "https://api.render.com/v1/services/$FLASK_SERVICE_ID/deploys" \
             -H "Authorization: Bearer $RENDER_API_KEY" 

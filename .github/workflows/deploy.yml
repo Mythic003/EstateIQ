@@ -45,11 +45,16 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: client/package-lock.json
           
-      - name: Install frontend dependencies
+      - name: Clean Install frontend dependencies
         run: |
           cd client
+          rm -rf node_modules package-lock.json
           npm install
+          npm install -D tailwindcss@3.3.0 postcss@8.4.31 autoprefixer@10.4.16
+          npx tailwindcss init -p
           
       - name: Build frontend
         run: |

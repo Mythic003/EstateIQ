@@ -5,15 +5,16 @@ services:
     env: python
     buildCommand: |
       python -m pip install --upgrade pip
-      pip install -r ml-model/api/requirements.txt
-    startCommand: cd ml-model/api && gunicorn --bind 0.0.0.0:$PORT --workers 4 --timeout 120 wsgi:application
+      cd ml-model/api
+      pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 4 --timeout 120 wsgi:application
     envVars:
       - key: PYTHON_VERSION
         value: 3.9.0
       - key: PORT
         value: 8000
       - key: PYTHONPATH
-        value: ml-model/api
+        value: /opt/render/project/src/ml-model/api
       - key: FLASK_ENV
         value: production
       - key: GUNICORN_CMD_ARGS
@@ -30,6 +31,10 @@ services:
       cd client
       rm -rf node_modules package-lock.json
       npm install
+      npm install vite@5.0.0
+      npm install @vitejs/plugin-react@4.2.0
+      npm install -D tailwindcss@3.3.0 postcss@8.4.31 autoprefixer@10.4.16
+      npx tailwindcss init -p
       npm run build
     startCommand: cd client && npm run preview -- --port $PORT --host 0.0.0.0
     envVars:
