@@ -32,6 +32,8 @@ services:
       rm -rf node_modules package-lock.json
       npm cache clean --force
       npm install
+      npm install @emotion/react@11.11.0 @emotion/styled@11.11.0 @mui/icons-material@5.14.0 @mui/material@5.14.0 --save
+      npm install @headlessui/react@1.7.17 @heroicons/react@2.0.18 --save
       npm install vite@5.0.0 --save-dev
       npm install @vitejs/plugin-react@4.2.0 --save-dev
       npx tailwindcss init -p
