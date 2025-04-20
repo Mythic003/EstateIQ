@@ -1,22 +1,28 @@
 services:
+  # Flask API Service
   - type: web
     name: estateiq-api
     env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    buildCommand: pip install -r ml-model/api/requirements.txt
+    startCommand: gunicorn ml-model.api.wsgi:application
     envVars:
       - key: PYTHON_VERSION
-        value: 3.8.12
-      - key: FLASK_ENV
-        value: production
+        value: 3.9.0
       - key: PORT
-        value: 10000
+        value: 8000
+    healthCheckPath: /health
+    plan: free
 
+  # React Frontend Service
   - type: static
     name: estateiq-frontend
     env: node
-    buildCommand: npm install && npm run build
-    publishDirectory: build/
+    buildCommand: cd client && npm install && npm run build
+    publishDirectory: client/dist
     envVars:
+      - key: NODE_VERSION
+        value: 18.17.0
       - key: REACT_APP_API_URL
-        value: https://estateiq-api.onrender.com 
+        value: https://estateiq-api.onrender.com
+    healthCheckPath: /
+    plan: free 
