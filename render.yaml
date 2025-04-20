@@ -29,12 +29,7 @@ services:
     env: node
     buildCommand: |
       cd client
-      rm -rf node_modules package-lock.json
       npm install
-      npm install vite@5.0.0
-      npm install @vitejs/plugin-react@4.2.0
-      npm install -D tailwindcss@3.3.0 postcss@8.4.31 autoprefixer@10.4.16
-      npx tailwindcss init -p
       npm run build
     startCommand: cd client && npm run preview -- --port $PORT --host 0.0.0.0
     envVars:
@@ -44,5 +39,7 @@ services:
         value: 10000
       - key: REACT_APP_API_URL
         value: https://estateiq-api.onrender.com
+      - key: NODE_ENV
+        value: production
     healthCheckPath: /
     plan: free 
