@@ -14,15 +14,17 @@ services:
     plan: free
 
   # React Frontend Service
-  - type: static
+  - type: web
     name: estateiq-frontend
     env: node
     buildCommand: cd client && npm install && npm run build
-    publishDirectory: client/dist
+    startCommand: cd client && npm start
     envVars:
       - key: NODE_VERSION
         value: 18.17.0
       - key: REACT_APP_API_URL
         value: https://estateiq-api.onrender.com
+      - key: PORT
+        value: 3000
     healthCheckPath: /
     plan: free 
