@@ -28,8 +28,7 @@ services:
     env: node
     buildCommand: |
       cd client
-      npm ci
-      npx tailwindcss init -p
+      npm install
       npm run build
     startCommand: cd client && npm run preview -- --port $PORT --host 0.0.0.0
     envVars:
