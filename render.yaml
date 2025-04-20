@@ -27,12 +27,7 @@ services:
   - type: web
     name: estateiq-frontend
     env: node
-    buildCommand: |
-      cd client
-      rm -rf node_modules package-lock.json
-      npm install
-      npx tailwindcss init -p
-      npm run build
+    buildCommand: cd client && npm install && npx tailwindcss init -p && npm run build
     startCommand: cd client && npm run preview -- --port $PORT --host 0.0.0.0
     envVars:
       - key: NODE_VERSION
