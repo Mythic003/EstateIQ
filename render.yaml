@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: estateiq-api
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.8.12
+      - key: FLASK_ENV
+        value: production
+      - key: PORT
+        value: 10000
+
+  - type: static
+    name: estateiq-frontend
+    env: node
+    buildCommand: npm install && npm run build
+    publishDirectory: build/
+    envVars:
+      - key: REACT_APP_API_URL
+        value: https://estateiq-api.onrender.com 

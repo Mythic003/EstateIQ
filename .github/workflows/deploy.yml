@@ -1,0 +1,91 @@
+name: Deploy EstateIQ
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  deploy-ml-api:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+          
+      - name: Install ML API dependencies
+        run: |
+          cd ml-model/api
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name: Deploy ML API to Render
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          ML_API_SERVICE_ID: ${{ secrets.ML_API_SERVICE_ID }}
+        run: |
+          curl -X POST "https://api.render.com/v1/services/$ML_API_SERVICE_ID/deploys" \
+            -H "Authorization: Bearer $RENDER_API_KEY"
+
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '16'
+          
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm install
+          
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm run build
+          
+      - name: Deploy frontend to Render
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          FRONTEND_SERVICE_ID: ${{ secrets.FRONTEND_SERVICE_ID }}
+        run: |
+          curl -X POST "https://api.render.com/v1/services/$FRONTEND_SERVICE_ID/deploys" \
+            -H "Authorization: Bearer $RENDER_API_KEY"
+
+  deploy-backend:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '16'
+          
+      - name: Install backend dependencies
+        run: |
+          cd server
+          npm install
+          
+      - name: Deploy backend to Render
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          BACKEND_SERVICE_ID: ${{ secrets.BACKEND_SERVICE_ID }}
+        run: |
+          curl -X POST "https://api.render.com/v1/services/$BACKEND_SERVICE_ID/deploys" \
+            -H "Authorization: Bearer $RENDER_API_KEY" 

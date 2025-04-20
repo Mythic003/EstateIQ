@@ -1,0 +1,35 @@
+name: Deploy ML Model
+
+on:
+  push:
+    paths:
+      - 'ml-model/models/**'
+      - 'ml-model/scripts/**'
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+          
+      - name: Install dependencies
+        run: |
+          cd ml-model/api
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name: Deploy to Render
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          ML_API_SERVICE_ID: ${{ secrets.ML_API_SERVICE_ID }}
+        run: |
+          # Trigger deploy
+          curl -X POST "https://api.render.com/v1/services/$ML_API_SERVICE_ID/deploys" \
+            -H "Authorization: Bearer $RENDER_API_KEY" 
