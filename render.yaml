@@ -1,6 +1,6 @@
 services:
   # Flask API Service
-  - type: static
+  - type: web
     name: estateiq-api
     env: python
     buildCommand: pip install -r ml-model/api/requirements.txt
@@ -14,7 +14,7 @@ services:
     plan: free
 
   # React Frontend Service
-  - type: static
+  - type: web
     name: estateiq-frontend
     env: node
     buildCommand: cd client && npm install && npm run build
