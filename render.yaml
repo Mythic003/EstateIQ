@@ -4,12 +4,14 @@ services:
     name: estateiq-api
     env: python
     buildCommand: pip install -r ml-model/api/requirements.txt
-    startCommand: gunicorn ml-model.api.wsgi:application
+    startCommand: cd ml-model/api && gunicorn app:app
     envVars:
       - key: PYTHON_VERSION
         value: 3.9.0
       - key: PORT
         value: 8000
+      - key: PYTHONPATH
+        value: ml-model/api
     healthCheckPath: /health
     plan: free
 
