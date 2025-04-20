@@ -1,6 +1,6 @@
 services:
   # Flask API Service
-  - type: web
+  - type: static
     name: estateiq-api
     env: python
     buildCommand: pip install -r ml-model/api/requirements.txt
