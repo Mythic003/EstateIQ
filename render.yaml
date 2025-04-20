@@ -17,7 +17,11 @@ services:
   - type: web
     name: estateiq-frontend
     env: node
-    buildCommand: cd client && npm install && npm install -D tailwindcss postcss autoprefixer && npm run build
+    buildCommand: |
+      cd client
+      npm ci
+      npx tailwindcss init -p
+      npm run build
     startCommand: cd client && npm run preview -- --port $PORT
     envVars:
       - key: NODE_VERSION
