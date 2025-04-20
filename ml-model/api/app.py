@@ -22,6 +22,10 @@ logger.setLevel(logging.INFO)
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
+# Get the absolute path to the models directory
+MODELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models')
+MODEL_PATH = os.path.join(MODELS_DIR, 'best_model_20250420_000125.joblib')
+
 def download_model_if_needed():
     """Download model from GitHub if not present"""
     model_path = Path('models/best_model.joblib')
@@ -38,73 +42,73 @@ def download_model_if_needed():
         else:
             logger.error(f"Failed to download model: {response.status_code}")
 
-# Load the best model
 def load_model():
+    """Load the trained model from disk"""
     try:
-        # Download model if needed
-        download_model_if_needed()
+        if not os.path.exists(MODELS_DIR):
+            logger.error(f"Models directory not found at: {MODELS_DIR}")
+            raise FileNotFoundError(f"Models directory not found at: {MODELS_DIR}")
         
-        # Get the absolute path to the models directory
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        models_dir = os.path.join(current_dir, 'models')
+        if not os.path.exists(MODEL_PATH):
+            logger.error(f"Model file not found at: {MODEL_PATH}")
+            raise FileNotFoundError(f"Model file not found at: {MODEL_PATH}")
         
-        if not os.path.exists(models_dir):
-            logger.error(f"Models directory not found at: {models_dir}")
-            raise FileNotFoundError(f"Models directory not found at: {models_dir}")
-            
-        # Find all .joblib files
-        model_files = [f for f in os.listdir(models_dir) if f.endswith('.joblib')]
-        
-        if not model_files:
-            logger.error("No model files found in models directory")
-            raise FileNotFoundError("No model files found in models directory")
-            
-        # Get the most recent model (prefer best_model if available)
-        best_models = [f for f in model_files if f.startswith('best_model')]
-        if best_models:
-            model_file = sorted(best_models)[-1]
-        else:
-            model_file = sorted(model_files)[-1]
-            
-        model_path = os.path.join(models_dir, model_file)
-        
-        logger.info(f"Loading model from: {model_path}")
-        model_data = joblib.load(model_path)
-        return model_data['model'], model_data['feature_names']
+        model = joblib.load(MODEL_PATH)
+        logger.info("Model loaded successfully")
+        return model
     except Exception as e:
         logger.error(f"Error loading model: {str(e)}", exc_info=True)
         raise
 
-# Initialize model and feature names
+# Load model at startup
 try:
-    model, feature_names = load_model()
-    logger.info("Model loaded successfully!")
+    model = load_model()
+    logger.info("Model loaded successfully at startup")
 except Exception as e:
-    logger.warning(f"Could not load model. Error: {str(e)}")
-    model, feature_names = None, None
-
-@app.route('/predict', methods=['POST'])
-def predict():
-    if model is None:
-        return jsonify({"error": "Model not loaded"}), 500
-    
-    try:
-        data = request.get_json()
-        features = np.array(data['features']).reshape(1, -1)
-        prediction = model.predict(features)[0]
-        return jsonify({"prediction": float(prediction)})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
+    logger.error(f"Could not load model. Error: {str(e)}")
+    model = None
 
 @app.route('/health', methods=['GET'])
 def health_check():
+    """Health check endpoint"""
     return jsonify({
         'status': 'healthy',
-        'model_loaded': model is not None,
-        'timestamp': datetime.now().isoformat(),
-        'environment': os.getenv('FLASK_ENV', 'production')
+        'model_loaded': model is not None
     })
 
+@app.route('/predict', methods=['POST'])
+def predict():
+    """Make predictions using the loaded model"""
+    if model is None:
+        return jsonify({
+            'error': 'Model not loaded',
+            'message': 'The prediction model is not available'
+        }), 503
+
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'error': 'No data provided',
+                'message': 'Please provide input data in JSON format'
+            }), 400
+
+        # Convert input data to DataFrame
+        input_data = pd.DataFrame([data])
+        
+        # Make prediction
+        prediction = model.predict(input_data)
+        
+        return jsonify({
+            'prediction': float(prediction[0])
+        })
+    except Exception as e:
+        logger.error(f"Prediction error: {str(e)}", exc_info=True)
+        return jsonify({
+            'error': 'Prediction failed',
+            'message': str(e)
+        }), 500
+
 if __name__ == '__main__':
-    port = int(os.getenv('PORT', 5000))
-    app.run(host='0.0.0.0', port=port) 
+    port = int(os.getenv('PORT', 8000))  # Default to 8000 if PORT not set
+    app.run(host='0.0.0.0', port=port)  # Bind to all interfaces 
