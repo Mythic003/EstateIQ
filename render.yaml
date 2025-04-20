@@ -7,7 +7,7 @@ services:
       python -m pip install --upgrade pip
       cd ml-model/api
       pip install -r requirements.txt
-    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 4 --timeout 120 wsgi:application
+    startCommand: cd ml-model/api && gunicorn --bind 0.0.0.0:$PORT --workers 4 --timeout 120 wsgi:application
     envVars:
       - key: PYTHON_VERSION
         value: 3.9.0
