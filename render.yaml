@@ -3,8 +3,10 @@ services:
   - type: web
     name: estateiq-api
     env: python
-    buildCommand: pip install -r ml-model/api/requirements.txt
-    startCommand: cd ml-model/api && gunicorn --bind 0.0.0.0:$PORT wsgi:application
+    buildCommand: |
+      python -m pip install --upgrade pip
+      pip install -r ml-model/api/requirements.txt
+    startCommand: cd ml-model/api && gunicorn --bind 0.0.0.0:$PORT --workers 4 --timeout 120 wsgi:application
     envVars:
       - key: PYTHON_VERSION
         value: 3.9.0
@@ -12,7 +14,12 @@ services:
         value: 8000
       - key: PYTHONPATH
         value: ml-model/api
+      - key: FLASK_ENV
+        value: production
+      - key: GUNICORN_CMD_ARGS
+        value: "--access-logfile=- --error-logfile=- --capture-output --enable-stdio-inheritance"
     healthCheckPath: /health
+    healthCheckTimeout: 60
     plan: free
 
   # React Frontend Service
@@ -24,7 +31,7 @@ services:
       npm ci
       npx tailwindcss init -p
       npm run build
-    startCommand: cd client && npm run preview -- --port $PORT
+    startCommand: cd client && npm run preview -- --port $PORT --host 0.0.0.0
     envVars:
       - key: NODE_VERSION
         value: 18.17.0
