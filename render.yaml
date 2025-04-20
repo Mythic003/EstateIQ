@@ -32,8 +32,8 @@ services:
       rm -rf node_modules package-lock.json
       npm cache clean --force
       npm install --legacy-peer-deps
-      npm install react-icons@4.12.0 --legacy-peer-deps
-      npm install vite@5.0.0 @vitejs/plugin-react@4.2.0 --legacy-peer-deps
+      npm install vite@5.0.0 --save-dev
+      npm install @vitejs/plugin-react@4.2.0 --save-dev
       npx tailwindcss init -p
       npm run build
     startCommand: cd client && npm run preview -- --port $PORT --host 0.0.0.0
