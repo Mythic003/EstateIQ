@@ -68,12 +68,27 @@ except Exception as e:
     logger.error(f"Could not load model. Error: {str(e)}")
     model = None
 
+@app.route('/')
+def root():
+    """Root endpoint"""
+    return jsonify({
+        'message': 'EstateIQ API is running',
+        'status': 'online',
+        'timestamp': datetime.now().isoformat(),
+        'endpoints': {
+            'health': '/health',
+            'predict': '/predict'
+        }
+    })
+
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
     return jsonify({
         'status': 'healthy',
-        'model_loaded': model is not None
+        'model_loaded': model is not None,
+        'timestamp': datetime.now().isoformat(),
+        'environment': os.getenv('FLASK_ENV', 'production')
     })
 
 @app.route('/predict', methods=['POST'])
