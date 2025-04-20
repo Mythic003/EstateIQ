@@ -18,7 +18,7 @@ services:
     name: estateiq-frontend
     env: node
     buildCommand: cd client && npm install && npm run build
-    publishDirectory: client/dist
+    staticPublishPath: client/dist
     envVars:
       - key: NODE_VERSION
         value: 18.17.0
